@@ -1,1 +1,1 @@
-bnak-transaction-ingestion-api
+bank-transaction-ingestion-api
