@@ -1,3 +1,4 @@
+DEFAULT_FAILURE_THRESHOLD = 500
 EXPIRY_PERIOD = 7
 
 valid_categories = [
