@@ -1,3 +1,5 @@
+EXPIRY_PERIOD = 7
+
 valid_categories = [
     "groceries",
     "transport",
