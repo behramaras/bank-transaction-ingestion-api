@@ -11,4 +11,16 @@ class Upload(Base):
     rows_ingested = Column(Integer, default=0)
     rows_failed = Column(Integer, default=0)
 
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    transaction_id = Column(String, primary_key=True)
+    upload_id = Column(String, index=True)
+    account_id = Column(String, index=True)
+    user_id = Column(String, index=True)
+    timestamp = Column(DateTime, index=True)
+    amount = Column(Float)
+    currency = Column(String)
+    merchant_id = Column(String)
+    category = Column(String)
 
