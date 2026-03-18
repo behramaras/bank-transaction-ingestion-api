@@ -14,3 +14,19 @@ def write_report(upload_id: str, index: int, data: str, error: str):
             report_writer.writeheader()
 
         report_writer.writerow({"index": index, "data": data, "error": error})
+
+
+def generate_csv(upload_id: str):
+    path = f"{REPORTS_DIR}/{upload_id}.csv"
+
+    def output():
+        with open(path, "r", newline="") as failure_report:
+            for line in failure_report:
+                yield line
+ 
+    return StreamingResponse(
+        output(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{upload_id}_failures.csv"'},
+    )
+
