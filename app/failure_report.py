@@ -30,3 +30,14 @@ def generate_csv(upload_id: str):
         headers={"Content-Disposition": f'attachment; filename="{upload_id}_failures.csv"'},
     )
 
+def omit_report(expiry_period : int = EXPIRY_PERIOD) -> None:
+    now = datetime.now()
+    last_day = now - timedelta(days=expiry_period)
+
+    for report_name in os.listdir(REPORTS_DIR):
+        report_path = os.path.join(REPORTS_DIR, report_name)
+        report_time_created = datetime.fromtimestamp(os.path.getctime(report_path))
+
+        if report_time_created < last_day:
+            os.remove(report_path)
+
