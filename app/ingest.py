@@ -52,3 +52,93 @@ def row_validation(row: dict) -> list[str]:
         errors.append("category: invalid category")
 
     return errors
+
+
+def ingestion(file: UploadFile, db: Session, failure_threshold: int = DEFAULT_FAILURE_THRESHOLD):
+    omit_report()
+    upload_id = str(uuid.uuid4())
+
+    row_index = 0
+    rows_ingested = 0
+    rows_failed = 0
+
+    # Create temperory file for valid rows
+    temperory_file = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, newline="")
+    temperory_path = temperory_file.name
+    
+    # Setup CSV writer for temperory file
+    temperory_writer = csv.DictWriter(temperory_file, fieldnames=valid_field_names)
+    temperory_writer.writeheader()
+
+    file.file.seek(0)
+    row_reader = csv.DictReader(io.TextIOWrapper(file.file, encoding="utf-8"))
+    for row in row_reader:
+        row_index += 1
+        errors = row_validation(row)
+
+        if errors:
+            rows_failed += 1
+            write_report(upload_id, row_index, data=", ".join(row.values()), error=", ".join(errors))
+            
+            # Stop and fail if it exceeds threshold
+            if rows_failed > failure_threshold:
+                temperory_file.close()
+                os.remove(temperory_path)
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "upload_id": upload_id,
+                        "status": "aborted",
+                        "rows_processed": row_index,
+                        "rows_failed": rows_failed,
+                        "failure_report_url": f"/transactions/upload/{upload_id}/failures",
+                    },
+                )
+
+        else:
+            rows_ingested += 1
+            temperory_writer.writerow(
+                {
+                    "transaction_id": row["transaction_id"],
+                    "account_id": row["account_id"],
+                    "user_id": row["user_id"],
+                    "timestamp": row["timestamp"],
+                    "amount": row["amount"],
+                    "currency": row["currency"],
+                    "merchant_id": row["merchant_id"],
+                    "category": row["category"],
+                    "upload_id": upload_id,
+                }
+            )
+    temperory_file.close()
+
+    try: 
+        db_copy(temperory_path, db)
+
+        # Save Upload object to database
+        upload = Upload(
+            upload_id = upload_id,
+            status = "completed",
+            rows_ingested = rows_ingested,
+            rows_failed = rows_failed,
+            created_at = datetime.now(),
+        )
+        
+        db.add(upload)
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+    
+    finally:
+        # Clean up temperory file in any case
+        os.remove(temperory_path)
+
+    return {
+        "upload_id": upload_id,
+        "status": "completed",
+        "rows_ingested": rows_ingested,
+        "rows_failed": rows_failed,
+        "failure_report_url": f"/transactions/upload/{upload_id}/failures" if rows_failed > 0 else None,
+    }
