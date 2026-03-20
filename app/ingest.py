@@ -142,3 +142,26 @@ def ingestion(file: UploadFile, db: Session, failure_threshold: int = DEFAULT_FA
         "rows_failed": rows_failed,
         "failure_report_url": f"/transactions/upload/{upload_id}/failures" if rows_failed > 0 else None,
     }
+
+def db_copy(temperory_path: str, db: Session):
+    # Get the raw psycopg2 connection because we need it for COPY
+    connection = db.connection().connection
+    cursor = connection.cursor()
+
+    with open(temperory_path, "r") as f:
+        next(f)
+        cursor.copy_expert(
+            """copy transactions (
+                transaction_id,
+                upload_id,
+                account_id,
+                user_id,
+                timestamp,
+                amount,
+                currency,
+                merchant_id,
+                category
+            ) from stdin with csv""",
+            f,
+        )
+    cursor.close()
