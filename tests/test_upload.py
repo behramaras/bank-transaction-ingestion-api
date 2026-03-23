@@ -94,3 +94,9 @@ def test_failure_endpoint_returns_200():
     )
     
     assert failure_response.status_code == 200
+
+    def test_transaction_id_validation():
+    row = row_data.copy()
+    row["transaction_id"] = ""
+    errors = row_validation(row)
+    assert "transaction_id: cannot be empty" in errors
