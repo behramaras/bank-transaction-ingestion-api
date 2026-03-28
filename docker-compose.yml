@@ -1,0 +1,17 @@
+services:
+  database:
+    image: postgres:18.3
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=mypassword
+      - POSTGRES_DB=transactions
+    ports:
+      - "5432:5432"
+  app:
+    build: .
+    depends_on:
+      - database
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
